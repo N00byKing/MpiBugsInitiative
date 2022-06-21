@@ -20,14 +20,12 @@ class Tool(AbstractTool):
         if os.path.exists("tools/parcoach/.git"):
             subprocess.run("cd tools/parcoach && git pull &&  cd ../..", shell=True, check=True)
         else:
-            subprocess.run("rm -rf tools/parcoach && git clone --depth=1 https://github.com/parcoach/parcoach.git tools/parcoach", shell=True, check=True)
-
-        subprocess.run("ln -s $(which clang) /usr/lib/llvm-9/bin/clang", shell=True, check=True)
+            subprocess.run("rm -rf tools/parcoach && git clone --depth=1 https://github.com/N00byKing/parcoach.git --branch=llvm13_compat tools/parcoach", shell=True, check=True)
 
         # Go to where we want to install it, and build it out-of-tree (we're in the docker)
         subprocess.run(f"rm -rf {rootdir}/builds/parcoach && mkdir -p {rootdir}/builds/parcoach", shell=True, check=True)
         os.chdir(f'{rootdir}/builds/parcoach')
-        subprocess.run(f"cmake {rootdir}/tools/parcoach -DCMAKE_C_COMPILER=clang -DLLVM_DIR={rootdir}/tools/Parcoach/llvm-project/build", shell=True, check=True)
+        subprocess.run(f"cmake {rootdir}/tools/parcoach -DCMAKE_C_COMPILER=clang-13 -DLLVM_DIR={rootdir}/tools/Parcoach/llvm-project/build", shell=True, check=True)
         subprocess.run("make -j$(nproc) VERBOSE=1", shell=True, check=True)
 
         # Back to our previous directory
@@ -37,8 +35,8 @@ class Tool(AbstractTool):
         cachefile = f'{binary}_{id}'
 
         run_cmd(
-            buildcmd=f"clang -c -g -emit-llvm {filename} -I/usr/lib/x86_64-linux-gnu/mpich/include/ -o {binary}.bc",
-            execcmd=f"opt-9 -load ../../builds/parcoach/src/aSSA/aSSA.so -parcoach -check-mpi {binary}.bc -o /dev/null",
+            buildcmd=f"clang-13 -c -g -emit-llvm {filename} -I/usr/lib/x86_64-linux-gnu/mpich/include/ -o {binary}.bc",
+            execcmd=f"opt-13 -enable-new-pm=0 -load ../../builds/parcoach/src/aSSA/aSSA.so -parcoach -check-mpi {binary}.bc -o /dev/null",
             cachefile=cachefile,
             filename=filename,
             binary=binary,

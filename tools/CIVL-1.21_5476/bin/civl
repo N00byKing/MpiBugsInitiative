@@ -1,0 +1,2 @@
+#!/bin/sh
+java -jar -Duser.home=$HOME -Djava.io.tmpdir=$TMPDIR /opt/CIVL-1.21_5476/lib/civl-1.21_5476.jar $@
