@@ -220,7 +220,7 @@ def cmd_gencodes():
 ########################
 def cmd_build(rootdir, toolname):
     # Basic verification
-    tools[toolname].ensure_image()
+    #tools[toolname].ensure_image()
 
     # Build the tool on need
     tools[toolname].build(rootdir=rootdir, cached=False)
@@ -236,7 +236,7 @@ def cmd_run(rootdir, toolname, batchinfo):
     print(f"Run tool {toolname} from {os.getcwd()} (batch {batchinfo}).")
 
     # Basic verification
-    tools[toolname].ensure_image()
+    #tools[toolname].ensure_image()
 
     # Build the tool on need
     tools[toolname].build(rootdir=rootdir)
@@ -261,6 +261,57 @@ def cmd_run(rootdir, toolname, batchinfo):
             p.terminate()
 
     tools[toolname].teardown()
+
+########################
+# cmd_stats(): Only the summary part of HTML
+########################
+
+def cmd_stats(rootdir, toolnames=[]):
+    here = os.getcwd()
+    os.chdir(rootdir)
+    results = {}
+    total_elapsed = {}
+    used_toolnames = []
+    for toolname in toolnames:
+        if not toolname in tools:
+            raise Exception(f"Tool {toolname} does not seem to be a valid name.")
+
+        if os.path.exists(f'logs/{toolname}'):
+            used_toolnames.append(toolname)
+            # To compute statistics on the performance of this tool
+            results[toolname]= {'failure':[], 'timeout':[], 'unimplemented':[], 'other':[], 'TRUE_NEG':[], 'TRUE_POS':[], 'FALSE_NEG':[], 'FALSE_POS':[]}
+
+    for test in sorted(todo, key=lambda t: f"{possible_details[t['detail']]}|{t['detail']}|{t['filename']}|{t['id']}"):
+        binary=re.sub('\.c', '', os.path.basename(test['filename']))
+        ID=test['id']
+        test_ID = f"{binary}_{ID}"
+        expected=test['expect']
+        for toolname in used_toolnames:
+            (res_category, elapsed, diagnostic, outcome) = categorize(toolname=toolname, test_ID=test_ID, expected=expected)
+            results[toolname][res_category].append(f"{test_ID} expected {test['detail']}, outcome: {diagnostic}")
+
+    for toolname in used_toolnames:
+        TP = len(results[toolname]['TRUE_POS'])
+        TN = len(results[toolname]['TRUE_NEG'])
+        FP = len(results[toolname]['FALSE_POS'])
+        FN = len(results[toolname]['FALSE_NEG'])
+        nPort = len(results[toolname]['unimplemented'])
+        nFail = len(results[toolname]['failure'])
+        other = len(results[toolname]['other'])
+        nTout = len(results[toolname]['timeout'])
+        passed = TP + TN
+        total = passed + FP + FN + nTout + nPort + nFail + other
+        print(f"\nXXXX Summary for {toolname} XXXX  {passed} test{'' if passed == 1 else 's'} passed (out of {total})")
+        print(f"API coverage: {percent(nPort,total,compl=True)}% ({nPort} tests failed out of {total})")
+        print(
+            f"Robustness: {percent((nTout+nFail),(total-nPort),compl=True)}% ({nTout} timeouts and {nFail} failures out of {total-nPort})\n")
+
+        print(f"Recall: {percent(TP,(TP+FN))}% (found {TP} errors out of {TP+FN})")
+        print(f"Specificity: {percent(TN,(TN+FP))}% (recognized {TN} correct codes out of {TN+FP})")
+        print(f"Precision: {percent(TP,(TP+FP))}% ({TP} diagnostic of error are correct out of {TP+FP})")
+        print(f"Accuracy: {percent((TP+TN),(TP+TN+FP+FN))}% ({TP+TN} correct diagnostics in total, out of {TP+TN+FP+FN} diagnostics)")
+
+    os.chdir(here)
 
 ########################
 # cmd_html(): what to do when '-c html' is used (extract the statistics of this tool)
@@ -1070,6 +1121,13 @@ elif args.c == 'html':
     else:
         toolnames=arg_tools
     cmd_html(rootdir, toolnames=toolnames)
+elif args.c == 'stats':
+    extract_all_todo(args.b)
+    if args.x == 'mpirun':
+        toolnames=['aislinn', 'civl', 'isp','itac', 'simgrid','smpi','smpivg', 'mpisv', 'must', 'parcoach']
+    else:
+        toolnames=arg_tools
+    cmd_stats(rootdir, toolnames=toolnames)
 else:
     print(f"Invalid command '{args.c}'. Please choose one of 'all', 'generate', 'build', 'run', 'html' or 'latex'")
     sys.exit(1)

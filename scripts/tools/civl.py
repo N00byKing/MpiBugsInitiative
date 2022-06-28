@@ -12,12 +12,12 @@ class Tool(AbstractTool):
     def build(self, rootdir, cached=True):
         if cached and os.path.exists("/root/.sarl"):
             return
-        subprocess.run(f"cd {rootdir}/tools/CIVL-1.20_5259/lib && java -jar civl-1.20_5259.jar config", shell=True, check=True)
+        subprocess.run(f"cd {rootdir}/tools/CIVL-1.21_5476/lib && java -jar civl-1.21_5476.jar config", shell=True, check=True)
  
     def run(self, execcmd, filename, binary, id, timeout, batchinfo):
         cachefile = f'{binary}_{id}'
 
-        execcmd = re.sub("mpirun", "java -jar ../../tools/CIVL-1.20_5259/lib/civl-1.20_5259.jar verify", execcmd)
+        execcmd = re.sub("mpirun", "java -jar ../../tools/CIVL-1.21_5476/lib/civl-1.21_5476.jar verify", execcmd)
         execcmd = re.sub('-np ', "-input_mpi_nprocs=", execcmd)
         execcmd = re.sub('\${EXE}', filename, execcmd)
         execcmd = re.sub('\$zero_buffer', "", execcmd)
@@ -103,7 +103,7 @@ class Tool(AbstractTool):
         if re.search('Error: Incompatible types for operator NEQ:\nstruct MPI_Comm\nstruct MPI_Comm\nat', output):
             return 'failure'
         
-        #  $ java -jar ../../tools/CIVL-1.20_5259/lib/civl-1.20_5259.jar verify -input_mpi_nprocs=2 /MBI/gencodes/CollOpNull_Reduce_nok.c
+        #  $ java -jar ../../tools/CIVL-1.21_5476/lib/civl-1.21_5476.jar verify -input_mpi_nprocs=2 /MBI/gencodes/CollOpNull_Reduce_nok.c
         # CIVL v1.20 of 2019-09-27 -- http://vsl.cis.udel.edu/civl
         # Hello from rank 0 
         # Hello from rank 1 
